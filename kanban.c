@@ -53,12 +53,15 @@ int id_counter = 0, user_counter = 0, act_counter = 3, system_time = 0;
 /* FUNCTIONS PROTOTYPES */
 
 void initialize_system();
-int read_desc(char desc[]);
+void read(char string[]);
 void command(int c);
 void command_t(int dur, char desc[]);
 int compare(char desc[]);
 void command_l_numbers();
 void command_l();
+void command_n();
+void command_u_users(char user[]);
+void command_u();
 
 /* MAIN */
 
@@ -76,13 +79,14 @@ int main()
     return 0;
 }
 
-void initialize_system(){
+void initialize_system()
+{
     strcpy(system.activ[0].act, TO_DO);
     strcpy(system.activ[1].act, IN_PROGRESS);
     strcpy(system.activ[2].act, DONE);
 }
 
-int read_desc(char desc[])
+void read(char string[])
 {
     int state = 0, i = 0; /* state: 0 - outside string, 1 - inside */
     char c;
@@ -93,23 +97,23 @@ int read_desc(char desc[])
             continue;
         } 
         state = 1;
-        desc[i] = c;
+        string[i] = c;
         i++;
     }
-    desc[i] = '\0'; /* all string need to end with '\0' */
-    return i;
+    string[i] = '\0'; /* all string need to end with '\0' */
 }
 
 void command(int c)
 {
     int duration, chr;
     char description[DESCMAX] /*,user[USEACTMAX], activity[USEACTMAX]*/;
+    char user[USEACTMAX];
 
     switch (c)
     {
     case 't':
         scanf("%d", &duration);
-        read_desc(description);
+        read(description);
         command_t(duration, description);
         break;
     
@@ -122,11 +126,15 @@ void command(int c)
         break;
 
     case 'n':
-        printf("n");
+        command_n();
         break;
 
-    case 'u':
-        printf("u");
+    case 'u': /*verificar o pq de estar a aceitar +20 caracteres */
+        if((chr = getchar()) == '\n'){
+            command_u();
+        } else{
+            command_u_users(user);
+        }
         break;
 
     case 'm':
@@ -182,7 +190,8 @@ void command_l_numbers(){
     int chr, i;
     while((chr) != '\n'){
         scanf("%i", &i);
-        chr = getchar();
+        chr = getchar(); /* the getchar is inside the while so it doesnt
+                            skip the first number */
         if (i <= id_counter){
             printf("%i %s #%i %s\n", system.tasks[i - 1].id, \
             system.tasks[i - 1].activ.act, system.tasks[i - 1].dur, \
@@ -192,4 +201,42 @@ void command_l_numbers(){
         }
     }
     return;
+}
+
+void command_n(){
+    int time;
+    scanf("%i", &time);
+    if (time != 0 && time >0){
+        system_time += time;
+    } else if(time < 0){
+        printf("invalid time\n");
+        return;
+    }
+    printf("%i\n", system_time);
+}
+
+void command_u_users(char user[]){
+    int i;
+    
+    read(user);
+
+    for(i = 0; i < user_counter; ++i){
+        if(strcmp(system.users[i].us, user) == 0){
+            printf("user already exists\n");
+            return;
+        }
+    }
+    if (user_counter + 1 > MAXUSERS){
+        printf("too many users\n");
+        return;
+    }
+    strcpy(system.users[user_counter].us, user);
+    ++user_counter;
+}
+
+void command_u(){
+    int i;
+    for (i = 0; i < user_counter; ++i){
+        printf("%s\n", system.users[i].us);
+    }
 }
