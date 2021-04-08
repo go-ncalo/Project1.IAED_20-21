@@ -19,6 +19,11 @@
 #define DUR_ERROR "invalid duration"
 #define TASK_ERROR "too many tasks"
 #define DESC_ERROR "duplicate description"
+#define USEREXIST_ERROR "user already exists"
+#define USERCOUNT_ERROR "too many users"
+#define ACTEXIST_ERROR "duplicate activity"
+#define ACTDESC_ERROR "invalid description"
+#define ACTCOUNT_ERROR "too many activities"
 #define TASK "task"
 /* define dos erros, de todos os printf */
 
@@ -62,6 +67,8 @@ void command_l();
 void command_n();
 void command_u_users(char user[]);
 void command_u();
+void command_a_activities(char activity[]);
+void command_a();
 
 /* MAIN */
 
@@ -106,8 +113,7 @@ void read(char string[])
 void command(int c)
 {
     int duration, chr;
-    char description[DESCMAX] /*,user[USEACTMAX], activity[USEACTMAX]*/;
-    char user[USEACTMAX];
+    char description[DESCMAX], user[USEACTMAX], activity[USEACTMAX];
 
     switch (c)
     {
@@ -146,7 +152,11 @@ void command(int c)
         break;
 
     case 'a':
-        printf("a");
+        if((chr = getchar()) == '\n'){
+            command_a();
+        } else{
+            command_a_activities(activity);
+        }
         break;
 
     }
@@ -222,12 +232,12 @@ void command_u_users(char user[]){
 
     for(i = 0; i < user_counter; ++i){
         if(strcmp(system.users[i].us, user) == 0){
-            printf("user already exists\n");
+            printf("%s\n", USEREXIST_ERROR);
             return;
         }
     }
     if (user_counter + 1 > MAXUSERS){
-        printf("too many users\n");
+        printf("%s\n", USERCOUNT_ERROR);
         return;
     }
     strcpy(system.users[user_counter].us, user);
@@ -239,4 +249,35 @@ void command_u(){
     for (i = 0; i < user_counter; ++i){
         printf("%s\n", system.users[i].us);
     }
+}
+
+void command_a_activities(char activity[]){
+    int i, size;
+    read(activity);
+    size = strlen(activity);
+    for (i = 0; i < act_counter; ++i){
+        if(strcmp(system.activ[i].act, activity) == 0){
+            printf("%s\n", ACTEXIST_ERROR);
+            return;
+        }
+    }
+    for (i = 0; i < size; ++i){
+        if(activity[i] >= 'a' && activity[i] <= 'z'){
+            printf("%s\n", ACTDESC_ERROR);
+            return;
+        }
+        
+    }
+    if (act_counter + 1 > MAXACTIVITIES){
+        printf("%s\n", ACTCOUNT_ERROR);
+        return;
+    }
+    strcpy(system.activ[act_counter].act, activity);
+    ++act_counter;
+}
+
+void command_a(){
+    int i;
+    for (i= 0; i < act_counter; ++i)
+        printf("%s\n", system.activ[i].act);
 }
