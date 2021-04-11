@@ -25,6 +25,11 @@
 #define ACTDESC_ERROR "invalid description"
 #define ACTCOUNT_ERROR "too many activities"
 #define TASK "task"
+#define NOTASK_ERROR "no such task"
+#define TASKSTARTED_ERROR "task already started"
+#define USER_ERROR "no such user"
+#define ACT_ERROR "no such activity"
+
 /* define dos erros, de todos os printf */
 
 /* STRUCTURES */
@@ -51,14 +56,11 @@ struct Kanban{
     struct user users[MAXUSERS];
 } system; /* main system */
 
-/* GLOBAL VARIABLES */
-
-int id_counter = 0, user_counter = 0, act_counter = 3, system_time = 0;
-
 /* FUNCTIONS PROTOTYPES */
 
 void initialize_system();
 void read(char string[]);
+void read_word(char string[]);
 void command(int c);
 void command_t(int dur, char desc[]);
 int compare(char desc[]);
@@ -69,6 +71,17 @@ void command_u_users(char user[]);
 void command_u();
 void command_a_activities(char activity[]);
 void command_a();
+void sort_array();
+void index(int array[]);
+void command_m();
+int no_task(int id);
+int started_task(int id, char activity[]);
+int no_user(char user[]);
+int no_activity(char activity[]);
+
+/* GLOBAL VARIABLES */
+
+int id_counter = 0, user_counter = 0, act_counter = 3, system_time = 0;
 
 /* MAIN */
 
@@ -110,6 +123,24 @@ void read(char string[])
     string[i] = '\0'; /* all string need to end with '\0' */
 }
 
+void read_word(char string[]){
+    {
+    int state = 0, i = 0; /* state: 0 - outside string, 1 - inside */
+    char c;
+
+    while (!isspace(c = getchar())){
+        /* ignores the white spaces in the beggining */
+        if(state == 0 && (isspace(c) != 0)){
+            continue;
+        } 
+        state = 1;
+        string[i] = c;
+        i++;
+    }
+    string[i] = '\0'; /* all string need to end with '\0' */
+}
+}
+
 void command(int c)
 {
     int duration, chr;
@@ -125,7 +156,7 @@ void command(int c)
     
     case 'l':
         if ((chr = getchar()) == '\n'){
-            command_l(); /* falta fazer */
+            command_l();
         } else{
             command_l_numbers();
         }
@@ -144,7 +175,7 @@ void command(int c)
         break;
 
     case 'm':
-        printf("m");
+        command_m();
         break;
 
     case 'd':
@@ -177,7 +208,7 @@ void command_t(int dur, char desc[]){
         printf("%s\n", TASK_ERROR);
     } else if (compare(desc)){
         printf("%s\n", DESC_ERROR);
-    } else if (dur < 0){
+    } else if (dur <= 0){
         printf("%s\n", DUR_ERROR);
     } else{
     system.tasks[id_counter].id = id_counter + 1;
@@ -193,7 +224,14 @@ void command_t(int dur, char desc[]){
 }
 
 void command_l(){
-    printf("1\n");
+    int i;
+    int index_array[TASKSMAX];
+    index(index_array);
+    sort_array(index_array);
+    for (i= 0; i < id_counter; ++i)
+        printf("%i %s #%i %s\n", system.tasks[index_array[i] - 1].id, \
+            system.tasks[index_array[i] - 1].activ.act, system.tasks[index_array[i] - 1].dur, \
+            system.tasks[index_array[i] - 1].desc);
 }
 
 void command_l_numbers(){
@@ -211,6 +249,28 @@ void command_l_numbers(){
         }
     }
     return;
+}
+
+void index(int array[]){
+    int i;
+    for (i = 0; i < id_counter; ++i){
+        array[i] = i + 1;
+    }
+}
+
+void sort_array(int array[]){
+    int i, j, k;
+    for(i = 0; i < id_counter - 1; ++i){
+        for (j = i + 1; j < id_counter; ++j){
+            if(strcmp(system.tasks[i].desc, system.tasks[j].desc) > 0){
+                
+                k = array[i];
+                array[i] = array[j];
+                array[j] = k;
+
+            }
+        }
+    }
 }
 
 void command_n(){
@@ -280,4 +340,75 @@ void command_a(){
     int i;
     for (i= 0; i < act_counter; ++i)
         printf("%s\n", system.activ[i].act);
+}
+
+void command_m(){
+    int id;
+    char user[USEACTMAX], activity[USEACTMAX];
+    scanf("%i", &id);
+    getchar(); /* used to read the space between the id and the user */
+    read_word(user);
+    read(activity);
+    if (no_task(id)){
+        printf("%s\n", NOTASK_ERROR);
+        return;
+    }
+    if (started_task(id, activity)){
+        printf("%s\n", TASKSTARTED_ERROR);
+        return;
+    }
+    if (no_user(user)){
+        printf("%s\n", USER_ERROR);
+        return;
+    }
+    if (no_activity(activity)){
+        printf("%s\n", ACT_ERROR);
+        return;
+    }
+    if (strcmp(system.tasks[id - 1].activ.act, activity) == 0){
+        strcpy(system.tasks[id - 1].user.us, user);
+        return;
+    } else if(strcmp(activity, DONE) == 0){
+        int duration, slack;
+        duration = system_time - system.tasks[id - 1].start;
+        slack = duration - system.tasks[id - 1].dur;
+        printf("duration=%i slack=%i\n", duration, slack);
+    
+    } else{
+        strcpy(system.tasks[id - 1].user.us, user);
+        strcpy(system.tasks[id - 1].activ.act, activity);
+        system.tasks[id - 1].start = system_time;
+    }
+}
+
+int no_task(int id){
+    if (id > id_counter){
+        return 1;
+    }
+    return 0;
+}
+
+int started_task(int id, char activity[]){
+    if((strcmp(system.tasks[id - 1].activ.act, TO_DO) != 0) && ((strcmp(activity, TO_DO)) == 0)){
+        return 1;
+    }
+    return 0;
+}
+
+int no_user(char user[]){
+    int i;
+    for (i = 0; i < user_counter; ++i){
+        if (strcmp(system.users[i].us, user) == 0)
+            return 0;
+    }
+    return 1;
+}
+
+int no_activity(char activity[]){
+    int i;
+    for (i = 0; i < act_counter; ++i){
+        if (strcmp(system.activ[i].act, activity) == 0)
+            return 0;
+    }
+    return 1;
 }
