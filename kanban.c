@@ -30,7 +30,7 @@
 #define USER_ERROR "no such user\0"
 #define ACT_ERROR "no such activity\0"
 #define key(A) (A)
-#define less(A, B) (strcmp(system.tasks[A - 1].desc, system.tasks[B - 1].desc) < 0)
+#define less(A, B) (strcmp(system.tasks[A].desc, system.tasks[B].desc) < 0)
 #define exch(A, B) { Item t = A; A = B; B = t; }
 
 /* define dos erros, de todos os printf */
@@ -233,9 +233,9 @@ void command_l(){
     index(index_array);
     quicksort(index_array, 0, id_counter - 1);
     for (i= 0; i < id_counter; ++i)
-        printf("%i %s #%i %s\n", system.tasks[index_array[i] - 1].id, \
-            system.tasks[index_array[i] - 1].activ.act, system.tasks[index_array[i] - 1].dur, \
-            system.tasks[index_array[i] - 1].desc);
+        printf("%i %s #%i %s\n", system.tasks[index_array[i]].id, \
+            system.tasks[index_array[i]].activ.act, system.tasks[index_array[i]].dur, \
+            system.tasks[index_array[i]].desc);
 }
 
 void command_l_numbers(){
@@ -258,7 +258,7 @@ void command_l_numbers(){
 void index(int array[]){
     int i;
     for (i = 0; i < id_counter; ++i){
-        array[i] = i + 1;
+        array[i] = i;
     }
 }
 
@@ -410,13 +410,14 @@ int no_activity(char activity[]){
 void command_d(){
     int i, j;
     int index_array[TASKSMAX];
-    int index_array2[TASKSMAX];
     char activity[USEACTMAX];
     read(activity);
     
     i = index_act(index_array, activity);
-    index_act(index_array2, activity);
-    sort_start(index_array2, index_array, i);
+    
+    if(strcmp(activity, TO_DO) == 0){
+        quicksort(index_array, 0, i);
+    }
 
     if (no_activity(activity)){
         printf("%s\n", ACT_ERROR);
@@ -429,27 +430,14 @@ void command_d(){
 }
 
 int index_act(int array[], char activity[]){
-    int i, j = 0;
+    int i, j = -1;
     for (i = 0; i < id_counter; ++i){
         if (strcmp(system.tasks[i].activ.act, activity) == 0){
-            array[j] = i;
             ++j;
+            array[j] = i;
         }
     }
-    return --j;
-}
-
-void sort_start(int array[], int res[], int counter){
-    int i, j, temp;
-    for (i = 0; i < counter - 1; ++i){
-        for (j = i + 1; i < counter; ++j){
-            if(system.tasks[array[i]].start > system.tasks[array[j]].start){
-                temp = res[j];
-                res[j] = res[i];
-                res[i] = temp;
-            } 
-        }
-    }
+    return j;
 }
 
 void quicksort(Item a[], int left, int right)
