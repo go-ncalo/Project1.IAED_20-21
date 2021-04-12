@@ -13,22 +13,25 @@
 #define TASKSMAX 10000
 #define MAXACTIVITIES 10
 #define MAXUSERS 50
-#define TO_DO "TO DO"
-#define IN_PROGRESS "IN PROGRESS"
-#define DONE "DONE"
-#define DUR_ERROR "invalid duration"
-#define TASK_ERROR "too many tasks"
-#define DESC_ERROR "duplicate description"
-#define USEREXIST_ERROR "user already exists"
-#define USERCOUNT_ERROR "too many users"
-#define ACTEXIST_ERROR "duplicate activity"
-#define ACTDESC_ERROR "invalid description"
-#define ACTCOUNT_ERROR "too many activities"
-#define TASK "task"
-#define NOTASK_ERROR "no such task"
-#define TASKSTARTED_ERROR "task already started"
-#define USER_ERROR "no such user"
-#define ACT_ERROR "no such activity"
+#define TO_DO "TO DO\0"
+#define IN_PROGRESS "IN PROGRESS\0"
+#define DONE "DONE\0"
+#define DUR_ERROR "invalid duration\0"
+#define TASK_ERROR "too many tasks\0"
+#define DESC_ERROR "duplicate description\0"
+#define USEREXIST_ERROR "user already exists\0"
+#define USERCOUNT_ERROR "too many users\0"
+#define ACTEXIST_ERROR "duplicate activity\0"
+#define ACTDESC_ERROR "invalid description\0"
+#define ACTCOUNT_ERROR "too many activities\0"
+#define TASK "task\0"
+#define NOTASK_ERROR "no such task\0"
+#define TASKSTARTED_ERROR "task already started\0"
+#define USER_ERROR "no such user\0"
+#define ACT_ERROR "no such activity\0"
+#define key(A) (A)
+#define less(A, B) (strcmp(system.tasks[A - 1].desc, system.tasks[B - 1].desc) < 0)
+#define exch(A, B) { Item t = A; A = B; B = t; }
 
 /* define dos erros, de todos os printf */
 
@@ -56,6 +59,8 @@ struct Kanban{
     struct user users[MAXUSERS];
 } system; /* main system */
 
+typedef int Item;
+
 /* FUNCTIONS PROTOTYPES */
 
 void initialize_system();
@@ -78,6 +83,11 @@ int no_task(int id);
 int started_task(int id, char activity[]);
 int no_user(char user[]);
 int no_activity(char activity[]);
+void command_d();
+int index_act(int array[], char activity[]);
+void sort_start(int array[], int res[], int counter);
+void quicksort(int a[], int left, int right);
+int partition(int a[], int left, int right);
 
 /* GLOBAL VARIABLES */
 
@@ -123,22 +133,16 @@ void read(char string[])
     string[i] = '\0'; /* all string need to end with '\0' */
 }
 
-void read_word(char string[]){
-    {
-    int state = 0, i = 0; /* state: 0 - outside string, 1 - inside */
+void read_word(char string[])
+{
+    int i = 0;
     char c;
 
     while (!isspace(c = getchar())){
-        /* ignores the white spaces in the beggining */
-        if(state == 0 && (isspace(c) != 0)){
-            continue;
-        } 
-        state = 1;
         string[i] = c;
         i++;
     }
     string[i] = '\0'; /* all string need to end with '\0' */
-}
 }
 
 void command(int c)
@@ -179,7 +183,7 @@ void command(int c)
         break;
 
     case 'd':
-        printf("d");
+        command_d();
         break;
 
     case 'a':
@@ -227,7 +231,7 @@ void command_l(){
     int i;
     int index_array[TASKSMAX];
     index(index_array);
-    sort_array(index_array);
+    quicksort(index_array, 0, id_counter - 1);
     for (i= 0; i < id_counter; ++i)
         printf("%i %s #%i %s\n", system.tasks[index_array[i] - 1].id, \
             system.tasks[index_array[i] - 1].activ.act, system.tasks[index_array[i] - 1].dur, \
@@ -255,21 +259,6 @@ void index(int array[]){
     int i;
     for (i = 0; i < id_counter; ++i){
         array[i] = i + 1;
-    }
-}
-
-void sort_array(int array[]){
-    int i, j, k;
-    for(i = 0; i < id_counter - 1; ++i){
-        for (j = i + 1; j < id_counter; ++j){
-            if(strcmp(system.tasks[i].desc, system.tasks[j].desc) > 0){
-                
-                k = array[i];
-                array[i] = array[j];
-                array[j] = k;
-
-            }
-        }
     }
 }
 
@@ -370,14 +359,19 @@ void command_m(){
         return;
     } else if(strcmp(activity, DONE) == 0){
         int duration, slack;
+        strcpy(system.tasks[id - 1].user.us, user);
+        strcpy(system.tasks[id - 1].activ.act, activity);
         duration = system_time - system.tasks[id - 1].start;
         slack = duration - system.tasks[id - 1].dur;
         printf("duration=%i slack=%i\n", duration, slack);
     
-    } else{
+    } else if(strcmp(system.tasks[id - 1].activ.act, TO_DO) == 0){
         strcpy(system.tasks[id - 1].user.us, user);
         strcpy(system.tasks[id - 1].activ.act, activity);
         system.tasks[id - 1].start = system_time;
+    } else{
+        strcpy(system.tasks[id - 1].user.us, user);
+        strcpy(system.tasks[id - 1].activ.act, activity);
     }
 }
 
@@ -411,4 +405,75 @@ int no_activity(char activity[]){
             return 0;
     }
     return 1;
+}
+
+void command_d(){
+    int i, j;
+    int index_array[TASKSMAX];
+    int index_array2[TASKSMAX];
+    char activity[USEACTMAX];
+    read(activity);
+    
+    i = index_act(index_array, activity);
+    index_act(index_array2, activity);
+    sort_start(index_array2, index_array, i);
+
+    if (no_activity(activity)){
+        printf("%s\n", ACT_ERROR);
+        return;
+    }
+
+    for (j = 0; j <= i; ++j){
+        printf("%i %i %s\n", system.tasks[index_array[j]].id, system.tasks[index_array[j]].start, system.tasks[index_array[j]].desc);
+    }
+}
+
+int index_act(int array[], char activity[]){
+    int i, j = 0;
+    for (i = 0; i < id_counter; ++i){
+        if (strcmp(system.tasks[i].activ.act, activity) == 0){
+            array[j] = i;
+            ++j;
+        }
+    }
+    return --j;
+}
+
+void sort_start(int array[], int res[], int counter){
+    int i, j, temp;
+    for (i = 0; i < counter - 1; ++i){
+        for (j = i + 1; i < counter; ++j){
+            if(system.tasks[array[i]].start > system.tasks[array[j]].start){
+                temp = res[j];
+                res[j] = res[i];
+                res[i] = temp;
+            } 
+        }
+    }
+}
+
+void quicksort(Item a[], int left, int right)
+{
+    int i;
+    if (right <= left) return;
+    i = partition(a, left, right);
+    quicksort(a, left, i - 1);
+    quicksort(a, i + 1, right);
+}
+
+int partition(Item a[], int left, int right)
+{
+    int i = left - 1;
+    int j = right;
+    Item v = a[right];
+    while (i < j){
+        while (less(a[++i], v));
+        while (less(v, a[--j]))
+            if (j == left)
+                break;
+        if (i < j)
+            exch(a[i], a[j]);
+    }
+    exch(a[i], a[right]);
+    return i;
 }
