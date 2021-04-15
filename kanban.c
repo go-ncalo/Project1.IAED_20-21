@@ -7,18 +7,25 @@
 
 /* DEFINES */
 
-/* maximum numbers of characters (ver casos q tem de ser +1)*/
+/* maximum numbers of characters*/
 #define DESCMAX 51
 #define USEACTMAX 21
-#define TASKSMAX 10000
+
+/* maximum numbers of tasks/users/activities */
+#define MAXTASKS 10000
 #define MAXACTIVITIES 10
 #define MAXUSERS 50
+
+/* activities */
 #define TO_DO "TO DO\0"
 #define IN_PROGRESS "IN PROGRESS\0"
 #define DONE "DONE\0"
+
+/* errors */
 #define DUR_ERROR "invalid duration\0"
 #define TASK_ERROR "too many tasks\0"
 #define DESC_ERROR "duplicate description\0"
+#define TIME_ERROR "invalid time\0"
 #define USEREXIST_ERROR "user already exists\0"
 #define USERCOUNT_ERROR "too many users\0"
 #define ACTEXIST_ERROR "duplicate activity\0"
@@ -29,11 +36,11 @@
 #define TASKSTARTED_ERROR "task already started\0"
 #define USER_ERROR "no such user\0"
 #define ACT_ERROR "no such activity\0"
+
+/* implementation for quick sort */
 #define key(A) (A)
 #define less(A, B) (strcmp(system.tasks[A].desc, system.tasks[B].desc) < 0)
 #define exch(A, B) { Item t = A; A = B; B = t; }
-
-/* define dos erros, de todos os printf */
 
 /* STRUCTURES */
 
@@ -54,7 +61,7 @@ struct task{
 };
 
 struct Kanban{
-    struct task tasks[TASKSMAX];
+    struct task tasks[MAXTASKS];
     struct activity activ[MAXACTIVITIES];
     struct user users[MAXUSERS];
 } system; /* main system */
@@ -95,8 +102,7 @@ int id_counter = 0, user_counter = 0, act_counter = 3, system_time = 0;
 
 /* MAIN */
 
-int main()
-{
+int main(){
     int c;
 
     initialize_system();
@@ -109,15 +115,17 @@ int main()
     return 0;
 }
 
-void initialize_system()
-{
+/* FUNCTIONS */
+
+/* initialize_system: starts the system with the three initial activites */
+void initialize_system(){
     strcpy(system.activ[0].act, TO_DO);
     strcpy(system.activ[1].act, IN_PROGRESS);
     strcpy(system.activ[2].act, DONE);
 }
 
-void read(char string[])
-{
+/* read: reads and stores in a string one or more words given in the input */
+void read(char string[]){
     int state = 0, i = 0; /* state: 0 - outside string, 1 - inside */
     char c;
 
@@ -130,11 +138,12 @@ void read(char string[])
         string[i] = c;
         i++;
     }
+
     string[i] = '\0'; /* all string need to end with '\0' */
 }
 
-void read_word(char string[])
-{
+/* read_word: reads and stores in a string only one word given in the input */
+void read_word(char string[]){
     int i = 0;
     char c;
 
@@ -142,11 +151,12 @@ void read_word(char string[])
         string[i] = c;
         i++;
     }
+
     string[i] = '\0'; /* all string need to end with '\0' */
 }
 
-void command(int c)
-{
+/* command: function that deals with the command given by the user */
+void command(int c){
     int duration, chr;
     char description[DESCMAX], user[USEACTMAX], activity[USEACTMAX];
 
@@ -170,7 +180,7 @@ void command(int c)
         command_n();
         break;
 
-    case 'u': /*verificar o pq de estar a aceitar +20 caracteres */
+    case 'u':
         if((chr = getchar()) == '\n'){
             command_u();
         } else{
@@ -193,33 +203,38 @@ void command(int c)
             command_a_activities(activity);
         }
         break;
-
     }
 }
 
-int compare(char desc[])
-{
+/* compare: returns 1 (True) if there's already that same description in
+the system and 0 (False) if it doesnt */
+int compare(char desc[]){
     int i;
+
     for (i = 0; i < id_counter; ++i){
-        if (strcmp(system.tasks[i].desc, desc) == 0)
+        if (!strcmp(system.tasks[i].desc, desc))
             return 1;
     }
+
     return 0;
 }
 
+/* command_t: adds a new task to the system */
 void command_t(int dur, char desc[]){
-    if (id_counter + 1 > TASKSMAX){
+    if (id_counter + 1 > MAXTASKS){
         printf("%s\n", TASK_ERROR);
     } else if (compare(desc)){
         printf("%s\n", DESC_ERROR);
     } else if (dur <= 0){
         printf("%s\n", DUR_ERROR);
     } else{
+        /* inital setup of the new task */
     system.tasks[id_counter].id = id_counter + 1;
     system.tasks[id_counter].dur = dur;
     system.tasks[id_counter].start = system_time;
     strcpy(system.tasks[id_counter].desc, desc);
-    system.tasks[id_counter].activ = system.activ[0];
+    system.tasks[id_counter].activ = system.activ[0]; /* activity 
+                                                        TO DO */
     ++id_counter;
 
     printf("%s %i\n", TASK, id_counter);
@@ -227,19 +242,25 @@ void command_t(int dur, char desc[]){
     }
 }
 
+/* command_l: lists all the tasks sorted by description */
 void command_l(){
     int i;
-    int index_array[TASKSMAX];
+    int index_array[MAXTASKS];
+
     index(index_array);
     quicksort(index_array, 0, id_counter - 1);
+
     for (i= 0; i < id_counter; ++i)
         printf("%i %s #%i %s\n", system.tasks[index_array[i]].id, \
-            system.tasks[index_array[i]].activ.act, system.tasks[index_array[i]].dur, \
+            system.tasks[index_array[i]].activ.act, \
+            system.tasks[index_array[i]].dur, \
             system.tasks[index_array[i]].desc);
 }
 
+/* command_l_numbers: lists the tasks with the ID's given by the user */
 void command_l_numbers(){
     int chr, i;
+
     while((chr) != '\n'){
         scanf("%i", &i);
         chr = getchar(); /* the getchar is inside the while so it doesnt
@@ -252,92 +273,119 @@ void command_l_numbers(){
             printf("%i: no such task\n", i);
         }
     }
+
     return;
 }
 
+/* index: stores in an array the id's of all the tasks in the system */
 void index(int array[]){
     int i;
+
     for (i = 0; i < id_counter; ++i){
         array[i] = i;
     }
 }
 
+/* command_n: function that progresses the time of the system */
 void command_n(){
     int time;
+
     scanf("%i", &time);
+
     if (time != 0 && time >0){
         system_time += time;
+    } else if(time == 0){
+        printf("%i\n", system_time);
+        return;
     } else if(time < 0){
-        printf("invalid time\n");
+        printf("%s\n", TIME_ERROR);
         return;
     }
+
     printf("%i\n", system_time);
 }
 
+/* command_u_users: creates a new user with the name given by the user */
 void command_u_users(char user[]){
     int i;
     
     read(user);
 
     for(i = 0; i < user_counter; ++i){
-        if(strcmp(system.users[i].us, user) == 0){
+        if(!strcmp(system.users[i].us, user)){
             printf("%s\n", USEREXIST_ERROR);
             return;
         }
     }
+
     if (user_counter + 1 > MAXUSERS){
         printf("%s\n", USERCOUNT_ERROR);
         return;
     }
+
     strcpy(system.users[user_counter].us, user);
     ++user_counter;
 }
 
+/* command_u: lists all the users present in the system */
 void command_u(){
     int i;
+
     for (i = 0; i < user_counter; ++i){
         printf("%s\n", system.users[i].us);
     }
 }
 
+/* command_a_activites: adds a new activity to the system */
 void command_a_activities(char activity[]){
     int i, size;
+
     read(activity);
     size = strlen(activity);
+
     for (i = 0; i < act_counter; ++i){
-        if(strcmp(system.activ[i].act, activity) == 0){
+        if(!strcmp(system.activ[i].act, activity)){
             printf("%s\n", ACTEXIST_ERROR);
             return;
         }
     }
+
     for (i = 0; i < size; ++i){
+        /* checks if description has lower case letters */
         if(activity[i] >= 'a' && activity[i] <= 'z'){
             printf("%s\n", ACTDESC_ERROR);
             return;
         }
         
     }
+
     if (act_counter + 1 > MAXACTIVITIES){
         printf("%s\n", ACTCOUNT_ERROR);
         return;
     }
+
     strcpy(system.activ[act_counter].act, activity);
     ++act_counter;
 }
 
+/* command_a: lists all the activities present in the system */
 void command_a(){
     int i;
+
     for (i= 0; i < act_counter; ++i)
         printf("%s\n", system.activ[i].act);
 }
 
+/* command_m: moves one task from an activity to other */
 void command_m(){
     int id;
     char user[USEACTMAX], activity[USEACTMAX];
+
     scanf("%i", &id);
     getchar(); /* used to read the space between the id and the user */
     read_word(user);
     read(activity);
+
     if (no_task(id)){
         printf("%s\n", NOTASK_ERROR);
         return;
@@ -354,18 +402,22 @@ void command_m(){
         printf("%s\n", ACT_ERROR);
         return;
     }
-    if (strcmp(system.tasks[id - 1].activ.act, activity) == 0){
+    /* if they move a task for the activity it already is in, it updates
+    the user */
+    if (!strcmp(system.tasks[id - 1].activ.act, activity)){
         strcpy(system.tasks[id - 1].user.us, user);
         return;
-    } else if(strcmp(activity, DONE) == 0){
+    } else if(!strcmp(activity, DONE)){
         int duration, slack;
         strcpy(system.tasks[id - 1].user.us, user);
         strcpy(system.tasks[id - 1].activ.act, activity);
         duration = system_time - system.tasks[id - 1].start;
         slack = duration - system.tasks[id - 1].dur;
         printf("duration=%i slack=%i\n", duration, slack);
-    
-    } else if(strcmp(system.tasks[id - 1].activ.act, TO_DO) == 0){
+
+    /* if the tasks they want to move is in the activity TO DO, it gives a 
+    start time to that task */
+    } else if(!strcmp(system.tasks[id - 1].activ.act, TO_DO)){
         strcpy(system.tasks[id - 1].user.us, user);
         strcpy(system.tasks[id - 1].activ.act, activity);
         system.tasks[id - 1].start = system_time;
@@ -375,6 +427,8 @@ void command_m(){
     }
 }
 
+/* no_task: auxiliary function for command m error, that check if the task
+exists in the system */
 int no_task(int id){
     if (id > id_counter){
         return 1;
@@ -382,69 +436,90 @@ int no_task(int id){
     return 0;
 }
 
+/* started_task: auxiliary function for command m error, that check if they
+are trying to move a task back to TO DO */
 int started_task(int id, char activity[]){
-    if((strcmp(system.tasks[id - 1].activ.act, TO_DO) != 0) && ((strcmp(activity, TO_DO)) == 0)){
+    if((strcmp(system.tasks[id - 1].activ.act, TO_DO)) && \
+    ((!strcmp(activity, TO_DO)))){
         return 1;
     }
     return 0;
 }
 
+/* no_user: auxiliary function for command m error, that check if the user
+exists in the system */
 int no_user(char user[]){
     int i;
+
     for (i = 0; i < user_counter; ++i){
-        if (strcmp(system.users[i].us, user) == 0)
+        if (!strcmp(system.users[i].us, user))
             return 0;
     }
     return 1;
 }
 
+/* no_activity: auxiliary function for command m/d error, that check if the
+activity exists in the system */
 int no_activity(char activity[]){
     int i;
+
     for (i = 0; i < act_counter; ++i){
-        if (strcmp(system.activ[i].act, activity) == 0)
+        if (!strcmp(system.activ[i].act, activity))
             return 0;
     }
     return 1;
 }
 
+/* command_d: lists all the tasks in an activity */
 void command_d(){
     int i, j;
-    int index_array[TASKSMAX];
+    int index_array[MAXTASKS];
     char activity[USEACTMAX];
+
     read(activity);
-    
-    i = index_act(index_array, activity);
-    
-    if(strcmp(activity, TO_DO) == 0){
-        quicksort(index_array, 0, i);
-    }
+    i = index_act(index_array, activity); /* size of the index_array */
 
     if (no_activity(activity)){
         printf("%s\n", ACT_ERROR);
         return;
     }
+    
+    /* all the tasks in TO DO have start = 0, so it sorts by description */
+    if(!strcmp(activity, TO_DO)){
+        quicksort(index_array, 0, i);
+    }
 
     for (j = 0; j <= i; ++j){
-        printf("%i %i %s\n", system.tasks[index_array[j]].id, system.tasks[index_array[j]].start, system.tasks[index_array[j]].desc);
+        printf("%i %i %s\n", system.tasks[index_array[j]].id, \
+        system.tasks[index_array[j]].start, \
+        system.tasks[index_array[j]].desc);
     }
 }
 
+/* index_act: stores in an array all the id's of the tasts that have the
+activity given in the argument and returns the size of the array */
 int index_act(int array[], char activity[]){
     int i, j = -1;
+
     for (i = 0; i < id_counter; ++i){
-        if (strcmp(system.tasks[i].activ.act, activity) == 0){
+        if (!strcmp(system.tasks[i].activ.act, activity)){
             ++j;
             array[j] = i;
         }
     }
+
     return j;
 }
 
+/* quicksort/partition: implementation of the quicksort algorithm
+given in class */
 void quicksort(Item a[], int left, int right)
 {
     int i;
+
     if (right <= left) return;
     i = partition(a, left, right);
+
     quicksort(a, left, i - 1);
     quicksort(a, i + 1, right);
 }
@@ -454,6 +529,7 @@ int partition(Item a[], int left, int right)
     int i = left - 1;
     int j = right;
     Item v = a[right];
+
     while (i < j){
         while (less(a[++i], v));
         while (less(v, a[--j]))
@@ -462,6 +538,7 @@ int partition(Item a[], int left, int right)
         if (i < j)
             exch(a[i], a[j]);
     }
+
     exch(a[i], a[right]);
     return i;
 }
