@@ -1,4 +1,9 @@
-/* Goncalo Botelho Mateus, 99225*/
+/*
+ * File:  kanban.c
+ * Author:  Gonçalo Mateus, 99225
+ * Description: Implementation of the kanban method, a task management system.
+*/
+
 /* INCLUDES */
 
 #include <stdio.h>
