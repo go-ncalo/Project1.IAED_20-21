@@ -4,4 +4,4 @@ IAED Project (20-21) @ IST
 
 *Language*: C
 
-**GRADE:** NG/20
+**GRADE:** 19/20
